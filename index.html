@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Modern MQTT Dashboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f4f8;
+        color: #333;
+        text-align: center;
+        padding: 50px;
+      }
+      h1 {
+        color: #0056b3;
+        margin-bottom: 30px;
+      }
+      .data-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 20px auto;
+        padding: 20px;
+        width: 80%;
+        width: 400px;
+        border-radius: 10px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .data {
+        font-size: 20px;
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
+        width: 100%;
+        text-align: center;
+        background-color: #e9f5ff;
+        border-left: 5px solid #0056b3;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .data span {
+        font-weight: bold;
+      }
+      .status-line {
+        margin: 5px 0;
+      }
+      .data-heading {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MQTT Live Dashboard</h1>
+    <div class="data-container">
+      <div class="data">
+        <span class="data-heading">Temperature:</span>
+        <span id="temperatureValue">N/A</span>
+      </div>
+      <div class="data">
+        <span class="data-heading">Status:</span><br />
+        <div id="statusLines"></div>
+      </div>
+    </div>
+    <script>
+      async function fetchData() {
+        try {
+          const response = await fetch("/poll");
+          if (response.ok) {
+            const data = await response.json();
+            const temperatureElem = document.getElementById("temperatureValue");
+            const statusLinesElem = document.getElementById("statusLines");
+
+            temperatureElem.innerText = data.temperature
+              ? data.temperature + " C"
+              : "N/A";
+
+            if (data.statusInfo) {
+              const statusParts = data.statusInfo.split(",");
+              let power = statusParts
+                .find((part) => part.startsWith("POWER"))
+                .split(":")[1];
+              let mode = statusParts
+                .find((part) => part.startsWith("MODE"))
+                .split(":")[1];
+              let fan = statusParts
+                .find((part) => part.startsWith("FAN"))
+                .split(":")[1];
+              let targetTemp = statusParts
+                .find((part) => part.startsWith("TARGET_TEMP"))
+                .split(":")[1];
+
+              let powerText = power == "1" ? "On" : "Off";
+              let modeText = mode == "1" ? "Cool" : "Heat";
+              let fanText = fan == "0" ? "Low" : fan == "1" ? "Medium" : "High";
+
+              statusLinesElem.innerHTML = `
+              <div class="status-line">Power: ${powerText}</div>
+              <div class="status-line">Mode: ${modeText}</div>
+              <div class="status-line">Fan: ${fanText}</div>
+              <div class="status-line">Target Temp: ${targetTemp} °C</div>
+            `;
+            } else {
+              statusLinesElem.innerHTML = "N/A";
+            }
+          } else {
+            console.error("Failed to fetch data:", response.status);
+          }
+        } catch (error) {
+          console.error("Fetch error:", error);
+        }
+      }
+
+      // Fetch data every 5 seconds
+      setInterval(fetchData, 5000);
+
+      // Initial fetch
+      fetchData();
+    </script>
+  </body>
+</html>
